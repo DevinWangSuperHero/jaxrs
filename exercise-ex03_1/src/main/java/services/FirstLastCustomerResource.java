@@ -1,12 +1,11 @@
 package services;
 
 import domain.Customer;
-import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import sun.util.resources.cldr.so.CurrencyNames_so;
 
+import javax.annotation.PostConstruct;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
@@ -19,32 +18,16 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-@Path("/customers")
-@Slf4j
-public class CustomerResource {
-    private Map<Integer, Customer> customerDB = new ConcurrentHashMap<Integer, Customer>();
-    private AtomicInteger idCounter = new AtomicInteger();
-
-    public CustomerResource() {
-    }
-
-    @POST
-    @Consumes("application/xml")
-    public Response createCustomer(InputStream is) {
-        Customer customer = readCustomer(is);
-        customer.setId(idCounter.incrementAndGet());
-        customerDB.put(customer.getId(),customer);
-        log.info("Created customer " + customer.getId());
-        return Response.created(URI.create("/customers/europe-db/"+ customer.getId())).build();
-    }
+public class FirstLastCustomerResource  {
+    private Map<String, Customer> customerDB =
+            new ConcurrentHashMap<String, Customer>();
 
     @GET
-    @Path("/{id: \\d+}")
+    @Path("/{first}-{last}")
     @Produces("application/xml")
-    public StreamingOutput getCustomer(@BeanParam CustomerInput customerInput) {
-        final Customer customer = customerDB.get(customerInput.getId());
+    public StreamingOutput getCustomer(@PathParam("first") String first, @PathParam("last") String last) {
+        final Customer customer = customerDB.get(first + "-" + last);
         if (customer == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
@@ -56,43 +39,31 @@ public class CustomerResource {
         };
     }
 
-    @GET
-    @Path("{first:[a-zA-Z]+}-{last: [a-zA-Z]+}")
-    public StreamingOutput getCustomerFirstLast(@PathParam("first") String first, @PathParam("last") String last) {
-        Customer found = null;
-        for (Customer customer:customerDB.values()) {
-            if (customer.getFirstName().equals(first) && customer.getLastName().equals(last)) {
-                found = customer;
-                break;
-            }
-        }
-        if (found == null) {
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-        final Customer customer = found;
-        return new StreamingOutput() {
-            @Override
-            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-                outputCustomer(outputStream,customer);
-            }
-        };
-    }
-
     @PUT
-    @Path("/{id : \\d+}")
-    @Consumes("application/xml")
-    public void updateCustomer(@PathParam("id") int id, InputStream is) {
-        Customer customer = readCustomer(is);
-        Customer current = customerDB.get(id);
+    @Path("{first}-{last}")
+    @Produces("application/xml")
+    public void updateCustomer(@PathParam("first") String first, @PathParam("last") String last, InputStream is) {
+        Customer update = readCustomer(is);
+        Customer current = customerDB.get(first+"-"+last);
         if (current == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
+//            customerDB.put(first+"-"+last,update);
         }
-        current.setFirstName(customer.getFirstName());
-        current.setLastName(current.getLastName());
-        current.setStreet(current.getStreet());
-        current.setState(customer.getState());
-        current.setZip(customer.getZip());
-        current.setCountry(customer.getCountry());
+        current.setFirstName(update.getFirstName());
+        current.setLastName(update.getLastName());
+        current.setStreet(update.getStreet());
+        current.setState(update.getState());
+        current.setZip(update.getZip());
+        current.setCountry(update.getCountry());
+    }
+
+    @POST
+    @Consumes("application/xml")
+    public Response createCustomer(InputStream is) {
+        Customer customer = readCustomer(is);
+        String index = customer.getFirstName() + "-" + customer.getLastName();
+        customerDB.put(index,customer);
+        return Response.created(URI.create("/customer/northamerica-db/"+index)).build();
     }
 
     public void outputCustomer(OutputStream os, Customer cust) {
@@ -141,5 +112,4 @@ public class CustomerResource {
             throw new WebApplicationException(e,Response.Status.BAD_REQUEST);
         }
     }
-
 }
