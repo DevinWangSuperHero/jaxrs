@@ -1,3 +1,4 @@
+import domain.Customer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -6,6 +7,10 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import java.io.StringReader;
+import java.io.StringWriter;
 
 public class CustomerResourceTest {
 
@@ -75,6 +80,23 @@ public class CustomerResourceTest {
         System.out.println("*** GET Created Customer **");
         String customer = client.target("http://localhost:8080/services/customers/northamerica-db/Bill-Burke").request().get(String.class);
         System.out.println(customer);
+    }
+
+    @Test
+    public void testCustomerJaxb() throws JAXBException {
+        Customer customer = new Customer();
+        customer.setId(123);
+        customer.setFirstName("tommy");
+
+        JAXBContext ctx = JAXBContext.newInstance(Customer.class);
+        StringWriter writer = new StringWriter();
+        ctx.createMarshaller().marshal(customer,writer);
+        String custString = writer.toString();
+        System.out.println(custString);
+
+        customer = (Customer) ctx.createUnmarshaller().unmarshal(new StringReader(custString));
+        System.out.println(customer.toString());
+
     }
 }
 

@@ -43,17 +43,12 @@ public class CustomerResource {
     @GET
     @Path("/{id: \\d+}")
     @Produces("application/xml")
-    public StreamingOutput getCustomer(@BeanParam CustomerInput customerInput) {
+    public Customer getCustomer(@BeanParam CustomerInput customerInput) {
         final Customer customer = customerDB.get(customerInput.getId());
         if (customer == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-        return new StreamingOutput() {
-            @Override
-            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-                outputCustomer(outputStream,customer);
-            }
-        };
+        return customer;
     }
 
     @GET
